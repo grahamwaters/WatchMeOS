@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Gesture Control Dashboard</title>
+  </head>
+  <body>
+    <h1>Gesture Control Dashboard</h1>
+    <p><strong>Mode:</strong> {{ state.mode }}</p>
+    <p><strong>Current Prompt:</strong> {{ state.current_prompt }}</p>
+    <p><strong>Predicted Action:</strong> {{ state.predicted_action }} (Confidence: {{ state.confidence }})</p>
+
+    <!-- Toggle mode form -->
+    <form action="/toggle_mode" method="post">
+      <input type="hidden" name="mode" value="{{ 'production' if state.mode=='training' else 'training' }}">
+      <button type="submit">Switch to {{ 'production' if state.mode=='training' else 'training' }} mode</button>
+    </form>
+
+    <!-- Confirm action (only in training mode) -->
+    {% if state.mode == 'training' %}
+    <form action="/confirm_action" method="post">
+      <button type="submit">Confirm Action: {{ state.predicted_action }}</button>
+    </form>
+    {% endif %}
+  </body>
+</html>
