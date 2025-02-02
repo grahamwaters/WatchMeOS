@@ -244,11 +244,14 @@ def main():
 
     # Buffers for training samples.
     samples_buffer = []     # Holds (flattened motion sample, label) tuples.
-    recording_buffer = []   # Holds consecutive frame feature vectors for one sample.
+    recording_buffer = []   # Holds consecutive frame feature vectors for one training sample.
     sample_count = 0        # Count of samples collected for current prompt.
 
-    # New flag: when sample threshold is reached, wait for the space bar to change gestures.
+    # Flag to wait for gesture change (space bar required)
     waiting_for_change = False
+
+    # We'll also maintain a sliding prediction buffer for preview
+    pred_buffer = []
 
     last_action_time = time.time()
 
@@ -269,6 +272,19 @@ def main():
         # Extract features (from hand landmarks).
         features = extract_features(hand_results, face_results)
 
+        # Update the prediction buffer (for preview) if features are available.
+        if features is not None:
+            pred_buffer.append(features)
+            if len(pred_buffer) > MOTION_WINDOW:
+                pred_buffer.pop(0)
+            if len(pred_buffer) == MOTION_WINDOW:
+                flat_pred = []
+                for feat in pred_buffer:
+                    flat_pred.extend(feat)
+                predicted_action, confidence = gesture_classifier.predict(flat_pred)
+                shared_state["predicted_action"] = predicted_action
+                shared_state["confidence"] = confidence
+
         # Check for key presses.
         key = cv2.waitKey(1) & 0xFF
         if key == 27:  # ESC to exit.
@@ -280,7 +296,7 @@ def main():
         if shared_state["mode"] == "training":
             shared_state["current_prompt"] = current_prompt
 
-            # If not waiting for a gesture change, record samples continuously.
+            # If not waiting for a gesture change, record training samples continuously.
             if not waiting_for_change:
                 if features is not None:
                     recording_buffer.append(features)
@@ -291,10 +307,10 @@ def main():
                     samples_buffer.append((new_sample, current_prompt))
                     sample_count += 1
                     print(f"Collected sample {sample_count} for '{current_prompt}'")
-                    recording_buffer = []  # Clear the buffer.
+                    recording_buffer = []  # Clear the recording buffer.
                     shared_state["sample_count"] = sample_count
 
-            # When enough samples have been collected, update classifier and wait for space bar.
+            # Once enough samples have been collected, update the classifier and wait for space bar to change prompt.
             if sample_count >= SAMPLE_THRESHOLD and not waiting_for_change:
                 print(f"Collected {SAMPLE_THRESHOLD} samples for '{current_prompt}'. Updating classifier...")
                 gesture_classifier = update_classifier(gesture_classifier, samples_buffer)
@@ -315,23 +331,15 @@ def main():
                 beep()
                 save_progress(gesture_classifier)
 
-            # Update preview predictions if features are available.
-            if features is not None:
-                predicted_action, confidence = gesture_classifier.predict(features)
-                shared_state["predicted_action"] = predicted_action
-                shared_state["confidence"] = confidence
-
         # -------------------------
         # Production Mode
         # -------------------------
         elif shared_state["mode"] == "production":
-            if features is not None:
-                predicted_action, confidence = gesture_classifier.predict(features)
-                shared_state["predicted_action"] = predicted_action
-                shared_state["confidence"] = confidence
-
-                if confidence > CONFIDENCE_THRESHOLD and (time.time() - last_action_time) > 2:
-                    execute_system_action(predicted_action)
+            # In production mode, we rely on the sliding prediction buffer already updated above.
+            if len(pred_buffer) == MOTION_WINDOW:
+                # If confidence is high and a cooldown period has passed, execute the action.
+                if shared_state["confidence"] > CONFIDENCE_THRESHOLD and (time.time() - last_action_time) > 2:
+                    execute_system_action(shared_state["predicted_action"])
                     last_action_time = time.time()
 
         # Draw debug information on the frame.
