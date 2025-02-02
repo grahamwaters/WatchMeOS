@@ -9,6 +9,7 @@
     <p><strong>Mode:</strong> {{ state.mode }}</p>
     <p><strong>Current Prompt:</strong> {{ state.current_prompt }}</p>
     <p><strong>Predicted Action:</strong> {{ state.predicted_action }} (Confidence: {{ state.confidence }})</p>
+    <p><strong>Samples Collected:</strong> {{ state.sample_count }}</p>
 
     <!-- Toggle mode form -->
     <form action="/toggle_mode" method="post">

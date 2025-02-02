@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """
-main.py – A live gesture-control application that uses the MacBook’s webcam
-to detect gestures, update a classifier with human-in-the-loop training,
-and execute (or preview) system actions via a Flask dashboard.
+main.py – A live gesture-control application for macOS that uses the webcam
+to detect gestures. It supports human-in-the-loop training, plays a beep
+between prompts, saves progress to a pickle file, and uses a motion window
+across keyframes so that actions (such as swiping) can be learned.
+New actions added: "mute" and "back".
 """
 
 import cv2
@@ -12,6 +14,7 @@ import time
 import threading
 from flask import Flask, render_template, request, jsonify
 import os
+import pickle
 from sklearn.svm import SVC
 
 # ------------------------
@@ -22,15 +25,17 @@ shared_state = {
     "current_prompt": "",
     "predicted_action": "none",
     "confidence": 0.0,
+    "sample_count": 0
 }
 
 # ------------------------
 # Constants & Prompts
 # ------------------------
-SAMPLE_THRESHOLD = 20         # Number of samples per prompt before updating the model
+SAMPLE_THRESHOLD = 10         # Reduced: Number of motion samples to collect per prompt
 CONFIDENCE_THRESHOLD = 0.7    # Confidence above which to trigger an action in production mode
+MOTION_WINDOW = 3             # Reduced: Number of consecutive frames to record for one sample
 
-# List of gestures that you want to train.
+# List of gesture prompts to be trained.
 gesture_prompts = [
     "point_upper_left",
     "point_upper_right",
@@ -38,15 +43,39 @@ gesture_prompts = [
     "swipe_left",
     "swipe_right",
     "volume_adjust",
-    "brightness_adjust"
+    "brightness_adjust",
+    "mute",
+    "back"
 ]
+
+# ------------------------
+# Helper: Beep function
+# ------------------------
+def beep():
+    """
+    Play a short beep sound.
+    On macOS, we can use afplay to play a system sound.
+    """
+    os.system("afplay /System/Library/Sounds/Ping.aiff")
+
+# ------------------------
+# Helper: Save Progress
+# ------------------------
+def save_progress(classifier):
+    """
+    Save the current classifier progress to a pickle file.
+    This function is called each time a beep is played.
+    """
+    with open("gesture_classifier_progress.pkl", "wb") as f:
+        pickle.dump(classifier, f)
+    print("Progress saved to gesture_classifier_progress.pkl")
 
 # ------------------------
 # Classifier Definition
 # ------------------------
 class MyGestureClassifier:
     def __init__(self):
-        self.samples = []  # List of feature vectors (lists of floats)
+        self.samples = []  # List of feature vectors (each is a list of floats)
         self.labels = []   # Corresponding gesture labels (strings)
         self.model = None
 
@@ -66,11 +95,11 @@ class MyGestureClassifier:
         for feat, label in new_samples:
             self.samples.append(feat)
             self.labels.append(label)
-        # Check if we have at least 2 different gesture classes before training.
+        # Check that we have at least 2 different gesture classes before training.
         unique_labels = set(self.labels)
         if len(unique_labels) < 2:
-            print("Skipping training: not enough classes (only found: {})".format(unique_labels))
-            return  # Do not train yet.
+            print("Skipping training: only one class present:", unique_labels)
+            return  # Do not train until more than one class exists.
         else:
             self.train()
 
@@ -91,7 +120,7 @@ def initialize_classifier():
 
 def extract_features(hand_results, face_results):
     """
-    Extract a simple feature vector from the detected hand landmarks.
+    Extract a feature vector from detected hand landmarks.
     This example uses the first hand’s landmarks (if available)
     by flattening all (x, y, z) coordinates.
     """
@@ -105,24 +134,20 @@ def extract_features(hand_results, face_results):
         return None
 
 def update_classifier(classifier, samples):
-    # Update the classifier with new samples.
     classifier.update(samples)
     return classifier
 
 def execute_system_action(action):
     """
     Execute a system command based on the recognized gesture.
-    (For demonstration purposes, many actions are placeholders.
-     Some use AppleScript commands on macOS.)
+    (For demonstration, many actions are placeholders and some use AppleScript on macOS.)
     """
     print("Executing system action:", action)
     if action == "stop":
         print("Action: Stop executed.")
     elif action == "point_upper_left":
-        # Example: Move a Finder window to the upper-left corner using AppleScript
         os.system("osascript -e 'tell application \"System Events\" to set the position of the first window of process \"Finder\" to {0, 0}'")
     elif action == "point_upper_right":
-        # Example: Move a Finder window to the upper-right corner
         os.system("osascript -e 'tell application \"System Events\" to set the position of the first window of process \"Finder\" to {1000, 0}'")
     elif action == "swipe_left":
         print("Action: Swipe Left executed.")
@@ -132,14 +157,19 @@ def execute_system_action(action):
         print("Action: Volume Adjust executed.")
     elif action == "brightness_adjust":
         print("Action: Brightness Adjust executed.")
+    elif action == "mute":
+        os.system("osascript -e 'set volume output muted true'")
+        print("Action: Mute executed.")
+    elif action == "back":
+        print("Action: Back executed.")
     else:
         print("No valid action to execute.")
 
 def draw_debug_info(frame, hand_results, face_results, state):
     """
-    Draw text overlays on the frame showing the mode, current prompt,
-    predicted action, and its confidence.
-    Optionally, also draw circles at each hand landmark.
+    Draw overlays on the frame showing the current mode, prompt,
+    predicted action/confidence, and the number of samples collected.
+    Also draws circles at each hand landmark.
     """
     cv2.putText(frame, f"Mode: {state['mode']}", (10, 30),
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
@@ -147,6 +177,9 @@ def draw_debug_info(frame, hand_results, face_results, state):
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
     cv2.putText(frame, f"Predicted: {state['predicted_action']} ({state['confidence']:.2f})", (10, 90),
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    if state["mode"] == "training":
+        cv2.putText(frame, f"Samples: {state.get('sample_count', 0)}/{SAMPLE_THRESHOLD}", (10, 120),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
     if hand_results.multi_hand_landmarks:
         for handLms in hand_results.multi_hand_landmarks:
             for lm in handLms.landmark:
@@ -206,7 +239,17 @@ def main():
     gesture_classifier = initialize_classifier()
 
     prompt_index = 0
-    samples_buffer = []  # Buffer to hold training samples.
+    # Set the initial prompt.
+    current_prompt = gesture_prompts[prompt_index]
+
+    # Buffers for training samples.
+    samples_buffer = []     # Holds (flattened motion sample, label) tuples.
+    recording_buffer = []   # Holds consecutive frame feature vectors for one sample.
+    sample_count = 0        # Count of samples collected for current prompt.
+
+    # New flag: when sample threshold is reached, wait for the space bar to change gestures.
+    waiting_for_change = False
+
     last_action_time = time.time()
 
     while cap.isOpened():
@@ -225,34 +268,63 @@ def main():
 
         # Extract features (from hand landmarks).
         features = extract_features(hand_results, face_results)
-        current_mode = shared_state["mode"]
 
-        if current_mode == "training":
-            current_prompt = gesture_prompts[prompt_index]
+        # Check for key presses.
+        key = cv2.waitKey(1) & 0xFF
+        if key == 27:  # ESC to exit.
+            break
+
+        # -------------------------
+        # Training Mode (Human-in-the-Loop)
+        # -------------------------
+        if shared_state["mode"] == "training":
             shared_state["current_prompt"] = current_prompt
 
-            if features is not None:
-                # Append the new sample as (features, label).
-                samples_buffer.append((features, current_prompt))
+            # If not waiting for a gesture change, record samples continuously.
+            if not waiting_for_change:
+                if features is not None:
+                    recording_buffer.append(features)
+                if len(recording_buffer) >= MOTION_WINDOW:
+                    new_sample = []
+                    for feat in recording_buffer:
+                        new_sample.extend(feat)
+                    samples_buffer.append((new_sample, current_prompt))
+                    sample_count += 1
+                    print(f"Collected sample {sample_count} for '{current_prompt}'")
+                    recording_buffer = []  # Clear the buffer.
+                    shared_state["sample_count"] = sample_count
 
-            # When enough samples have been collected, update the classifier.
-            # Note: The classifier will not actually train if only one class is present.
-            if len(samples_buffer) >= SAMPLE_THRESHOLD:
+            # When enough samples have been collected, update classifier and wait for space bar.
+            if sample_count >= SAMPLE_THRESHOLD and not waiting_for_change:
+                print(f"Collected {SAMPLE_THRESHOLD} samples for '{current_prompt}'. Updating classifier...")
                 gesture_classifier = update_classifier(gesture_classifier, samples_buffer)
-                samples_buffer = []  # Reset buffer for the next gesture.
-                # Cycle to the next prompt.
-                prompt_index = (prompt_index + 1) % len(gesture_prompts)
-                print("Collected samples for prompt. Next prompt:", gesture_prompts[prompt_index])
-                print("Make sure you perform at least two different gestures to train the model.")
+                samples_buffer = []  # Reset the samples buffer.
+                sample_count = 0
+                shared_state["sample_count"] = sample_count
+                beep()
+                save_progress(gesture_classifier)
+                waiting_for_change = True
+                print("Press space bar to switch to the next gesture prompt.")
 
-            # Always predict (for preview purposes) if we have features.
+            # When waiting for a gesture change, only switch prompt on space bar press.
+            if waiting_for_change and key == 32:
+                waiting_for_change = False
+                prompt_index = (prompt_index + 1) % len(gesture_prompts)
+                current_prompt = gesture_prompts[prompt_index]
+                print("Switching prompt to", current_prompt)
+                beep()
+                save_progress(gesture_classifier)
+
+            # Update preview predictions if features are available.
             if features is not None:
                 predicted_action, confidence = gesture_classifier.predict(features)
                 shared_state["predicted_action"] = predicted_action
                 shared_state["confidence"] = confidence
 
-        elif current_mode == "production":
-            # In production mode, automatically predict and (if confident) execute actions.
+        # -------------------------
+        # Production Mode
+        # -------------------------
+        elif shared_state["mode"] == "production":
             if features is not None:
                 predicted_action, confidence = gesture_classifier.predict(features)
                 shared_state["predicted_action"] = predicted_action
@@ -265,10 +337,6 @@ def main():
         # Draw debug information on the frame.
         debug_frame = draw_debug_info(frame, hand_results, face_results, shared_state)
         cv2.imshow('Gesture Control', debug_frame)
-
-        # Exit on pressing the ESC key.
-        if cv2.waitKey(1) & 0xFF == 27:
-            break
 
     cap.release()
     cv2.destroyAllWindows()

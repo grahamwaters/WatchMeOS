@@ -1,5 +1,5 @@
 #!/bin/bash
-# setup.sh – Create virtual environment and install dependencies
+# setup.sh – Create a virtual environment and install dependencies
 
 # Create a virtual environment named "venv"
 python3 -m venv venv
