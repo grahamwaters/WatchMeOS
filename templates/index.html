@@ -17,11 +17,22 @@
       <button type="submit">Switch to {{ 'production' if state.mode=='training' else 'training' }} mode</button>
     </form>
 
-    <!-- Confirm action (only in training mode) -->
+    <!-- Confirm Action (for production preview) -->
     {% if state.mode == 'training' %}
-    <form action="/confirm_action" method="post">
-      <button type="submit">Confirm Action: {{ state.predicted_action }}</button>
-    </form>
+      <form action="/confirm_action" method="post">
+        <button type="submit">Confirm Action: {{ state.predicted_action }}</button>
+      </form>
+    {% endif %}
+
+    <!-- New Sample Confirmation Buttons (only in training mode) -->
+    {% if state.mode == 'training' %}
+      <h3>Pending Sample Capture</h3>
+      <form action="/confirm_sample" method="post" style="display:inline;">
+        <button type="submit">Confirm Sample</button>
+      </form>
+      <form action="/cancel_sample" method="post" style="display:inline;">
+        <button type="submit">Cancel Sample</button>
+      </form>
     {% endif %}
   </body>
 </html>
