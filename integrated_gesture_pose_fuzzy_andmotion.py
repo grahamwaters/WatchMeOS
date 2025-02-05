@@ -4,37 +4,26 @@ integrated_keypress_gesture_pose_fuzzy.py
 
 Workflow:
 1. DATA COLLECTION & TRAINING:
-   - The system continuously monitors your video (hands, face, and body pose).
+   - Continuously monitors your video (hands, face, and body pose).
    - When you press a designated key (e.g. "volume_up", "volume_down", "next_song", "pause"),
      the current frame’s extracted features (from hands, face, and pose) are saved as a training sample
-     with that key as its label. Additionally, a fuzzy-distorted (augmented) image is saved.
-   - Once enough samples have been collected, the SVM classifier is retrained.
-   - Training metrics (e.g. training accuracy) are computed and saved to file.
-
-2. TESTING / PRODUCTION:
+     with that key as its label. An augmented (fuzzy-distorted) image is also saved.
+2. PRODUCTION:
    - In production mode the classifier predicts the key based on live features.
-   - When you press a key, the actual key is compared against the prediction and performance metrics
-     (including overall accuracy) are logged.
-   - If the model’s accuracy and confidence are high enough, the system can automatically execute actions.
-
-3. POSE, HAND, AND FACE TRACKING:
-   - Uses MediaPipe to detect and track detailed hand (including finger landmarks), face, and upper-body pose.
-   - Overlays on the video include:
-       • Hand landmarks (drawn in red)
-       • Face landmarks (drawn in green)
-       • Pose landmarks and connections (drawn in yellow)
-
-4. RESEARCH METRICS:
-   - All prediction events (with timestamp, actual key, predicted key, confidence, and correctness)
-     are logged and saved to a JSON file for later descriptive statistical analysis.
-
+   - Key press events are compared with predictions and logged.
+3. VISUALIZATION:
+   - The background is removed (using MediaPipe SelfieSegmentation).
+   - Left hand landmarks are drawn in blue; right hand landmarks in red; face landmarks in green.
+   - Pose landmarks (upper-body) are drawn in yellow.
+   - Recent key presses are overlaid on the video.
+4. ACTIVITY MODEL:
+   - Each key press event also saves a fixed-length movement feature vector (with time codes) into an activity log.
+   - When enough entries are collected, these are clustered and saved as a secondary model called "activity_model.pkl".
 5. WEB INTERFACE:
-   - A Flask app (running in a separate thread) lets you toggle between training and production modes
-     and manually confirm actions.
+   - A Flask app (in a separate thread) allows toggling between training and production modes.
 """
 
 import os
-# Disable Continuity Cameras – use only the built-in (or non-continuity) webcam.
 os.environ["OPENCV_AVFOUNDATION_IGNORE_CONTINUITY"] = "1"
 
 import cv2
@@ -52,47 +41,47 @@ from sklearn.svm import SVC
 from sklearn.cluster import KMeans
 
 # ------------------------
-# GLOBAL SHARED STATE & BUFFERS
+# GLOBAL STATE & BUFFERS
 # ------------------------
 shared_state = {
     "mode": "production",  # "training" or "production"
     "predicted_action": "none",
-    "confidence": 0.0
+    "confidence": 0.0,
+    "recent_key_presses": []  # list of (key, timestamp) to show on overlay
 }
 
-# Frame buffer: stores the last 5 seconds of frames (assumed FPS = 30)
+# Frame buffer (for keyframe extraction)
 BUFFER_SECONDS = 5
 FPS = 30
 FRAME_BUFFER_SIZE = BUFFER_SECONDS * FPS
 frame_buffer = deque(maxlen=FRAME_BUFFER_SIZE)  # Each entry: (frame, timestamp)
 
-# Key press events: each entry is a tuple (key_name, timestamp)
+# Key press events (for sample collection and logging)
 key_press_buffer = []
 
 # Training samples: list of tuples (feature_vector, key_label)
 training_samples = []
+samples_buffer = []  # temporary storage for current cycle
 
-# Temporary buffer for samples collected in current cycle.
-samples_buffer = []
+# Activity log: list of dicts with {"timestamp":..., "movement": fixed_length_vector}
+activity_log = []
 
-# Motion data for clustering (for research)
-motion_data = []
-
-# Performance metrics for logging (for research)
+# Performance metrics for research logging
 performance_metrics = {
     "total_predictions": 0,
     "correct_predictions": 0,
-    "prediction_history": []  # Each entry: {timestamp, actual, predicted, confidence, correct}
+    "prediction_history": []  # each: {timestamp, actual, predicted, confidence, correct}
 }
 
 # ------------------------
 # CONFIGURABLE CONSTANTS
 # ------------------------
-SAMPLE_THRESHOLD = 10         # Number of samples to collect before updating the classifier
-CONFIDENCE_THRESHOLD = 0.7    # Confidence threshold for production suggestions / auto-act
-MOTION_WINDOW = 3             # Number of consecutive frames to aggregate for a prediction
+SAMPLE_THRESHOLD = 10         # samples before retraining classifier
+CONFIDENCE_THRESHOLD = 0.7    # production confidence threshold
+MOTION_WINDOW = 3             # window size for smoothing predictions
+ACTIVITY_LOG_THRESHOLD = 50   # when to cluster activity log and update activity_model
 
-# Designated keys for key-based training and actions.
+# Designated keys for training/actions.
 KEY_ACTIONS = {
     "volume_up": "volume_up",
     "volume_down": "volume_down",
@@ -101,38 +90,38 @@ KEY_ACTIONS = {
 }
 
 # ------------------------
+# BACKGROUND REMOVAL (SelfieSegmentation)
+# ------------------------
+mp_selfie_segmentation = mp.solutions.selfie_segmentation
+selfie_segmentation = mp_selfie_segmentation.SelfieSegmentation(model_selection=1)
+
+# ------------------------
 # DATA AUGMENTATION: FUZZY DISTORTION
 # ------------------------
 def fuzzy_distortion(image, strength=5, kernel_size=3):
-    """
-    Applies a slight fuzzy distortion to the input image.
-    Simulates small variations in hand/finger appearance.
-    """
+    """Applies slight random displacement and blur to simulate variability."""
     rows, cols = image.shape[:2]
     dx = np.random.uniform(-strength, strength, size=(rows, cols))
     dy = np.random.uniform(-strength, strength, size=(rows, cols))
     map_x, map_y = np.meshgrid(np.arange(cols), np.arange(rows))
     map_x = (map_x.astype(np.float32) + dx).clip(0, cols - 1)
     map_y = (map_y.astype(np.float32) + dy).clip(0, rows - 1)
-    distorted_image = cv2.remap(image, map_x, map_y, interpolation=cv2.INTER_LINEAR)
+    distorted = cv2.remap(image, map_x, map_y, interpolation=cv2.INTER_LINEAR)
     if kernel_size > 1:
-        distorted_image = cv2.GaussianBlur(distorted_image, (kernel_size, kernel_size), 0)
-    return distorted_image
+        distorted = cv2.GaussianBlur(distorted, (kernel_size, kernel_size), 0)
+    return distorted
 
 def save_augmented_sample(image, label, count):
-    """
-    Saves an augmented (fuzzy-distorted) version of the image to disk.
-    """
+    """Saves a fuzzy-distorted image to disk."""
     aug_image = fuzzy_distortion(image, strength=5, kernel_size=3)
     filename = f"aug_sample_{label}_{count}.jpg"
     cv2.imwrite(filename, aug_image)
-    print(f"Saved augmented sample image: {filename}")
+    print(f"Saved augmented sample: {filename}")
 
 # ------------------------
 # HELPER: BEEP
 # ------------------------
 def beep():
-    """Plays a short beep sound (using macOS afplay)."""
     os.system("afplay /System/Library/Sounds/Ping.aiff")
 
 # ------------------------
@@ -140,7 +129,7 @@ def beep():
 # ------------------------
 def flatten_hand_landmarks(hand_landmarks, expected_count=21):
     if hand_landmarks is None:
-        return [0.0] * (expected_count * 3)
+        return [0.0]*(expected_count*3)
     vec = []
     for lm in hand_landmarks.landmark:
         vec.extend([lm.x, lm.y, lm.z])
@@ -148,44 +137,38 @@ def flatten_hand_landmarks(hand_landmarks, expected_count=21):
 
 def flatten_face_landmarks(face_landmarks, expected_count=468):
     if face_landmarks is None:
-        return [0.0] * (expected_count * 3)
+        return [0.0]*(expected_count*3)
     vec = []
     for lm in face_landmarks.landmark:
         vec.extend([lm.x, lm.y, lm.z])
     return vec
 
 # ------------------------
-# FEATURE EXTRACTION FOR TRAINING (Hands, Face, and Pose)
+# FEATURE EXTRACTION (Hands, Face, Pose)
 # ------------------------
 def extract_all_features(hand_results, face_results):
-    """
-    Extracts and concatenates hand and face features.
-    (Hand: 2 x 21 x 3; Face: 468 x 3)
-    """
-    left_hand_vec = [0.0] * (21 * 3)
-    right_hand_vec = [0.0] * (21 * 3)
+    """Concatenates hand (2x21x3) and face (468x3) features."""
+    left_hand = [0.0]*(21*3)
+    right_hand = [0.0]*(21*3)
     if hand_results.multi_hand_landmarks:
         hands = list(hand_results.multi_hand_landmarks)
         hands = sorted(hands, key=lambda h: h.landmark[mp.solutions.hands.HandLandmark.WRIST].x)
         if len(hands) >= 2:
-            left_hand_vec = flatten_hand_landmarks(hands[0])
-            right_hand_vec = flatten_hand_landmarks(hands[1])
+            left_hand = flatten_hand_landmarks(hands[0])
+            right_hand = flatten_hand_landmarks(hands[1])
         else:
             wrist = hands[0].landmark[mp.solutions.hands.HandLandmark.WRIST]
             if wrist.x < 0.5:
-                left_hand_vec = flatten_hand_landmarks(hands[0])
+                left_hand = flatten_hand_landmarks(hands[0])
             else:
-                right_hand_vec = flatten_hand_landmarks(hands[0])
-    face_vec = [0.0] * (468 * 3)
+                right_hand = flatten_hand_landmarks(hands[0])
+    face = [0.0]*(468*3)
     if face_results.multi_face_landmarks:
-        face_vec = flatten_face_landmarks(face_results.multi_face_landmarks[0])
-    return left_hand_vec + right_hand_vec + face_vec
+        face = flatten_face_landmarks(face_results.multi_face_landmarks[0])
+    return left_hand + right_hand + face
 
 def extract_pose_features(pose_results, mp_pose):
-    """
-    Extracts pose features from selected landmarks (shoulders, elbows, wrists, hips).
-    Returns a flattened vector.
-    """
+    """Extracts pose features from eight key landmarks."""
     if pose_results and pose_results.pose_landmarks:
         landmarks = [
             mp_pose.PoseLandmark.LEFT_SHOULDER, mp_pose.PoseLandmark.RIGHT_SHOULDER,
@@ -194,75 +177,71 @@ def extract_pose_features(pose_results, mp_pose):
             mp_pose.PoseLandmark.LEFT_HIP, mp_pose.PoseLandmark.RIGHT_HIP
         ]
         feat = []
-        for lm_enum in landmarks:
-            point = pose_results.pose_landmarks.landmark[lm_enum]
+        for lm in landmarks:
+            point = pose_results.pose_landmarks.landmark[lm]
             feat.extend([point.x, point.y, point.z])
         return feat
     else:
-        return [0.0] * (8 * 3)
+        return [0.0]*(8*3)
 
 def extract_full_features(hand_results, face_results, pose_results, mp_pose):
-    """
-    Combines hand, face, and pose features into one feature vector.
-    """
-    features1 = extract_all_features(hand_results, face_results)
-    features2 = extract_pose_features(pose_results, mp_pose)
-    return features1 + features2
+    """Combines hand, face, and pose features into one vector."""
+    return extract_all_features(hand_results, face_results) + extract_pose_features(pose_results, mp_pose)
 
 # ------------------------
-# FIXED-LENGTH MOTION FEATURES FOR CLUSTERING
+# FIXED-LENGTH MOTION FEATURES (for activity_model clustering)
 # ------------------------
 def extract_motion_features(hand_results, face_results, pose_results, mp_pose):
     """
-    Extracts a fixed-length 15-dimensional feature vector for clustering.
-    The vector includes:
-      - Hands: left and right wrist positions (3 coordinates each; if a hand is missing, zeros are used)
-      - Face: nose tip position (3 coordinates; zeros if missing)
-      - Pose: left and right shoulder positions (3 coordinates each; zeros if missing)
-    Total length: 3 + 3 + 3 + 6 = 15.
+    Returns a 15-dimensional vector:
+      - Hands: left and right wrist positions (3 coords each)
+      - Face: nose tip (3 coords)
+      - Pose: left and right shoulders (3 coords each)
     """
-    # Hands: fixed length 6
-    left_hand = [0.0, 0.0, 0.0]
-    right_hand = [0.0, 0.0, 0.0]
+    left_wrist = [0.0, 0.0, 0.0]
+    right_wrist = [0.0, 0.0, 0.0]
     if hand_results.multi_hand_landmarks:
         hands = list(hand_results.multi_hand_landmarks)
         if len(hands) >= 2:
-            hands = sorted(hands, key=lambda hand: hand.landmark[mp.solutions.hands.HandLandmark.WRIST].x)
-            left_hand = [hands[0].landmark[mp.solutions.hands.HandLandmark.WRIST].x,
-                         hands[0].landmark[mp.solutions.hands.HandLandmark.WRIST].y,
-                         hands[0].landmark[mp.solutions.hands.HandLandmark.WRIST].z]
-            right_hand = [hands[1].landmark[mp.solutions.hands.HandLandmark.WRIST].x,
-                          hands[1].landmark[mp.solutions.hands.HandLandmark.WRIST].y,
-                          hands[1].landmark[mp.solutions.hands.HandLandmark.WRIST].z]
+            hands = sorted(hands, key=lambda h: h.landmark[mp.solutions.hands.HandLandmark.WRIST].x)
+            left_wrist = [hands[0].landmark[mp.solutions.hands.HandLandmark.WRIST].x,
+                          hands[0].landmark[mp.solutions.hands.HandLandmark.WRIST].y,
+                          hands[0].landmark[mp.solutions.hands.HandLandmark.WRIST].z]
+            right_wrist = [hands[1].landmark[mp.solutions.hands.HandLandmark.WRIST].x,
+                           hands[1].landmark[mp.solutions.hands.HandLandmark.WRIST].y,
+                           hands[1].landmark[mp.solutions.hands.HandLandmark.WRIST].z]
         else:
             wrist = hands[0].landmark[mp.solutions.hands.HandLandmark.WRIST]
             if wrist.x < 0.5:
-                left_hand = [wrist.x, wrist.y, wrist.z]
+                left_wrist = [wrist.x, wrist.y, wrist.z]
             else:
-                right_hand = [wrist.x, wrist.y, wrist.z]
-    # Face: fixed length 3 (use nose tip)
-    face_feat = [0.0, 0.0, 0.0]
+                right_wrist = [wrist.x, wrist.y, wrist.z]
+    # Face: nose tip (index 1) – 3 values
+    nose = [0.0, 0.0, 0.0]
     if face_results.multi_face_landmarks:
         face = face_results.multi_face_landmarks[0]
         if len(face.landmark) > 1:
-            nose_tip = face.landmark[1]
-            face_feat = [nose_tip.x, nose_tip.y, nose_tip.z]
-    # Pose: fixed length 6 (left and right shoulders)
-    pose_feat = [0.0] * 6
+            nose_pt = face.landmark[1]
+            nose = [nose_pt.x, nose_pt.y, nose_pt.z]
+    # Pose: shoulders (each 3 values)
+    left_shoulder = [0.0, 0.0, 0.0]
+    right_shoulder = [0.0, 0.0, 0.0]
     if pose_results and pose_results.pose_landmarks:
-        left_shoulder = pose_results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER]
-        right_shoulder = pose_results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER]
-        pose_feat = [left_shoulder.x, left_shoulder.y, left_shoulder.z,
-                     right_shoulder.x, right_shoulder.y, right_shoulder.z]
-    return left_hand + right_hand + face_feat + pose_feat
+        left_shoulder = [pose_results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER].x,
+                         pose_results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER].y,
+                         pose_results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER].z]
+        right_shoulder = [pose_results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER].x,
+                          pose_results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER].y,
+                          pose_results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER].z]
+    return left_wrist + right_wrist + nose + left_shoulder + right_shoulder
 
 # ------------------------
 # KEY CLASSIFIER (SVM)
 # ------------------------
 class MyGestureClassifier:
     def __init__(self):
-        self.samples = []  # list of feature vectors
-        self.labels = []   # corresponding key labels
+        self.samples = []
+        self.labels = []
         self.model = None
 
     def train(self):
@@ -300,7 +279,7 @@ def update_classifier(classifier, samples):
     return classifier
 
 # ------------------------
-# PERFORMANCE METRICS HELPERS (for research logging)
+# PERFORMANCE METRICS HELPERS
 # ------------------------
 def update_performance_metrics(actual, predicted, confidence, timestamp):
     global performance_metrics
@@ -347,17 +326,22 @@ def execute_system_action(action):
         print("No valid action to execute.")
 
 # ------------------------
-# HAND & FACE VISUALIZATION
+# VISUALIZATION: HAND & FACE
 # ------------------------
 def draw_hand_and_face_info(frame, hand_results, face_results):
     h, w, _ = frame.shape
-    # Draw hand landmarks (each hand in red circles)
+    # Draw hand landmarks: left in blue, right in red.
     if hand_results.multi_hand_landmarks:
-        for hand_landmarks in hand_results.multi_hand_landmarks:
+        hands = list(hand_results.multi_hand_landmarks)
+        # Sort by wrist x coordinate.
+        hands = sorted(hands, key=lambda h: h.landmark[mp.solutions.hands.HandLandmark.WRIST].x)
+        for idx, hand_landmarks in enumerate(hands):
+            # Choose color: left hand = blue, right hand = red.
+            color = (255, 0, 0) if idx == 0 else (0, 0, 255)
             for lm in hand_landmarks.landmark:
                 cx, cy = int(lm.x * w), int(lm.y * h)
-                cv2.circle(frame, (cx, cy), 2, (0, 0, 255), -1)
-    # Draw face landmarks (in green)
+                cv2.circle(frame, (cx, cy), 2, color, -1)
+    # Draw face landmarks in green.
     if face_results.multi_face_landmarks:
         face_landmarks = face_results.multi_face_landmarks[0]
         for lm in face_landmarks.landmark:
@@ -366,7 +350,7 @@ def draw_hand_and_face_info(frame, hand_results, face_results):
     return frame
 
 # ------------------------
-# POSE VISUALIZATION (MediaPipe-based; can be replaced with ViTPose integration)
+# VISUALIZATION: POSE
 # ------------------------
 def draw_pose_info(frame, pose_results, mp_pose):
     if pose_results.pose_landmarks:
@@ -387,7 +371,6 @@ def draw_pose_info(frame, pose_results, mp_pose):
             cx, cy = int(lm.x * w), int(lm.y * h)
             pts[lm_enum] = (cx, cy)
             cv2.circle(frame, (cx, cy), 5, (0, 255, 255), -1)
-        # Draw connections for arms and torso.
         if (mp_pose.PoseLandmark.LEFT_SHOULDER in pts and
             mp_pose.PoseLandmark.LEFT_ELBOW in pts and
             mp_pose.PoseLandmark.LEFT_WRIST in pts):
@@ -403,7 +386,7 @@ def draw_pose_info(frame, pose_results, mp_pose):
     return frame
 
 # ------------------------
-# DEBUG & OVERLAY DRAWING
+# DEBUG & OVERLAY DRAWING (including recent key presses)
 # ------------------------
 def draw_debug_info(frame, hand_results, face_results, pose_results, state, mp_pose=None):
     h, w, _ = frame.shape
@@ -411,15 +394,32 @@ def draw_debug_info(frame, hand_results, face_results, pose_results, state, mp_p
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2)
     cv2.putText(frame, f"Predicted: {state['predicted_action']} ({state['confidence']:.2f})", (10, 70),
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2)
-    # Draw hand and face landmarks.
+    # Display recent key presses.
+    y0 = 110
+    for i, (k, tstamp) in enumerate(state.get("recent_key_presses", [])):
+        cv2.putText(frame, f"{k} @ {int(tstamp)}", (10, y0 + i*30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
     frame = draw_hand_and_face_info(frame, hand_results, face_results)
-    # Draw pose landmarks.
     if pose_results and mp_pose is not None:
         frame = draw_pose_info(frame, pose_results, mp_pose)
     return frame
 
 # ------------------------
-# KEYBOARD LISTENER (captures key press events)
+# BACKGROUND REMOVAL
+# ------------------------
+def remove_background(frame, rgb_frame):
+    """Uses MediaPipe SelfieSegmentation to remove the background (black background)."""
+    seg_results = selfie_segmentation.process(rgb_frame)
+    mask = seg_results.segmentation_mask
+    condition = mask > 0.5
+    # Create a black background.
+    bg_image = np.zeros(frame.shape, dtype=np.uint8)
+    # Composite: if condition true, use frame pixel; else use bg pixel.
+    output_image = np.where(condition[..., None], frame, bg_image)
+    return output_image
+
+# ------------------------
+# KEYBOARD LISTENER
 # ------------------------
 def on_key_press(key):
     try:
@@ -427,6 +427,10 @@ def on_key_press(key):
         if key_name in KEY_ACTIONS:
             timestamp = time.time()
             key_press_buffer.append((key_name, timestamp))
+            # Also update recent key presses (keep only last 5)
+            shared_state.setdefault("recent_key_presses", []).append((key_name, timestamp))
+            if len(shared_state["recent_key_presses"]) > 5:
+                shared_state["recent_key_presses"] = shared_state["recent_key_presses"][-5:]
             print(f"Captured key press: {key_name} at {timestamp}")
     except Exception as e:
         print("Error capturing key press:", e)
@@ -436,17 +440,17 @@ keyboard_listener.daemon = True
 keyboard_listener.start()
 
 # ------------------------
-# OPTIONAL: CLUSTERING OF USER MOTION (for research)
+# OPTIONAL: CLUSTERING OF USER MOTION (for activity_model)
 # ------------------------
 def cluster_user_movements(motion_data):
     if len(motion_data) < 10:
-        print("Not enough data for clustering.")
+        print("Not enough data for clustering activity.")
         return None
     X = np.array(motion_data)
     kmeans = KMeans(n_clusters=3, random_state=0, n_init=10)
     labels = kmeans.fit_predict(X)
-    print("User movement clusters:", labels)
-    return labels
+    print("Activity model clusters:", labels)
+    return {"cluster_centers": kmeans.cluster_centers_.tolist(), "labels": labels.tolist()}
 
 # ------------------------
 # FLASK WEB APP (for mode toggling & manual confirmation)
@@ -477,7 +481,7 @@ def run_flask():
 # MAIN APPLICATION LOOP
 # ------------------------
 def main():
-    # Start the Flask server in a separate thread.
+    # Start the Flask server.
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.daemon = True
     flask_thread.start()
@@ -497,9 +501,12 @@ def main():
     pose_detector = mp_pose.Pose(min_detection_confidence=0.7, min_tracking_confidence=0.5)
 
     gesture_classifier = initialize_classifier()
-    sample_count = 0  # Count of training samples collected in this cycle
-    pred_buffer = []  # Buffer for aggregating features for prediction
+    sample_count = 0
+    pred_buffer = []
     last_action_time = time.time()
+
+    # Global activity log for key presses with movement features.
+    global activity_log
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -507,10 +514,14 @@ def main():
             print("Failed to grab frame")
             break
 
-        frame = cv2.flip(frame, 1)  # Mirror for natural interaction
+        # Flip for natural interaction.
+        frame = cv2.flip(frame, 1)
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        # Process the frame.
+        # Remove background.
+        frame = remove_background(frame, rgb_frame)
+
+        # Process MediaPipe detectors.
         hand_results = hands_detector.process(rgb_frame)
         face_results = face_detector.process(rgb_frame)
         pose_results = pose_detector.process(rgb_frame)
@@ -518,7 +529,7 @@ def main():
         # Save current frame with timestamp.
         frame_buffer.append((frame.copy(), time.time()))
 
-        # Extract full features (hands, face, and pose).
+        # Extract full features.
         full_features = extract_full_features(hand_results, face_results, pose_results, mp_pose)
 
         # Aggregate features for smoothing predictions.
@@ -535,16 +546,29 @@ def main():
                 shared_state["confidence"] = confidence
 
         # -------------------------
-        # Process Key Press Events (for sample collection and performance logging)
+        # Process Key Press Events.
         # -------------------------
         if key_press_buffer:
             for key_name, press_time in key_press_buffer:
+                # Save the movement features for the activity model.
+                movement_features = extract_motion_features(hand_results, face_results, pose_results, mp_pose)
+                activity_log.append({"timestamp": press_time, "movement": movement_features})
+                # If the log exceeds threshold, cluster and save as activity_model.
+                if len(activity_log) >= ACTIVITY_LOG_THRESHOLD:
+                    activity_model = cluster_user_movements([entry["movement"] for entry in activity_log])
+                    # Also save time codes along with labels.
+                    time_codes = [entry["timestamp"] for entry in activity_log]
+                    with open("activity_model.pkl", "wb") as f:
+                        pickle.dump({"activity_model": activity_model, "time_codes": time_codes}, f)
+                    print("Saved activity_model with time codes.")
+                    activity_log = []  # reset log
+
                 if shared_state["mode"] == "training":
                     if full_features:
                         training_samples.append((full_features, key_name))
                         samples_buffer.append((full_features, key_name))
                         sample_count += 1
-                        print(f"Training sample added for key '{key_name}'. Total samples: {sample_count}")
+                        print(f"Training sample for key '{key_name}'. Total samples: {sample_count}")
                         save_augmented_sample(frame, key_name, sample_count)
                         if sample_count >= SAMPLE_THRESHOLD:
                             print(f"Collected {SAMPLE_THRESHOLD} samples. Updating classifier...")
@@ -560,7 +584,7 @@ def main():
                     predicted_key = shared_state["predicted_action"]
                     conf = shared_state["confidence"]
                     update_performance_metrics(actual_key, predicted_key, conf, press_time)
-                    print(f"Production mode: Actual: {actual_key}, Predicted: {predicted_key}, Confidence: {conf:.2f}")
+                    print(f"Production: Actual: {actual_key}, Predicted: {predicted_key}, Confidence: {conf:.2f}")
                     total = performance_metrics["total_predictions"]
                     correct = performance_metrics["correct_predictions"]
                     if total > 0 and (correct / total) > 0.8 and conf > CONFIDENCE_THRESHOLD:
@@ -570,17 +594,15 @@ def main():
             key_press_buffer.clear()
 
         # -------------------------
-        # OPTIONAL: Cluster motion data (for research)
+        # OPTIONAL: Cluster motion data (for research) if desired.
         # -------------------------
         motion_feat = extract_motion_features(hand_results, face_results, pose_results, mp_pose)
         if motion_feat:
-            motion_data.append(motion_feat)
-        if len(motion_data) > 50:
-            cluster_user_movements(motion_data)
-            motion_data.clear()
+            # (You can choose to also add to a separate motion log if needed.)
+            pass
 
         # -------------------------
-        # Production mode: Auto-act if conditions are met.
+        # Production mode auto-act.
         # -------------------------
         if shared_state["mode"] == "production":
             if len(pred_buffer) == MOTION_WINDOW:
@@ -592,11 +614,11 @@ def main():
                         last_action_time = time.time()
 
         # -------------------------
-        # Draw debug overlay (with hand, face, and pose info).
+        # Draw debug overlay.
         # -------------------------
         debug_frame = draw_debug_info(frame, hand_results, face_results, pose_results, shared_state, mp_pose=mp_pose)
         cv2.imshow("Key Press Gesture Control", debug_frame)
-        if cv2.waitKey(1) & 0xFF == 27:  # Exit on ESC key.
+        if cv2.waitKey(1) & 0xFF == 27:  # ESC to exit.
             break
 
     cap.release()
