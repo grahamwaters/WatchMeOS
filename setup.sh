@@ -11,7 +11,8 @@ source venv/bin/activate
 pip install --upgrade pip
 
 # Install required packages
-pip install opencv-python mediapipe flask scikit-learn numpy
+#note: pynput is new from latest iteration 2/5/25
+pip install opencv-python mediapipe flask scikit-learn numpy pynput
 
 echo "Setup complete."
 echo "To run the application, execute:"

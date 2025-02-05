@@ -54,6 +54,32 @@
         "documentation": {}
     },
     {
+        "label": "pickle",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "pickle",
+        "description": "pickle",
+        "detail": "pickle",
+        "documentation": {}
+    },
+    {
+        "label": "random",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "random",
+        "description": "random",
+        "detail": "random",
+        "documentation": {}
+    },
+    {
+        "label": "deque",
+        "importPath": "collections",
+        "description": "collections",
+        "isExtraImport": true,
+        "detail": "collections",
+        "documentation": {}
+    },
+    {
         "label": "Flask",
         "importPath": "flask",
         "description": "flask",
@@ -86,12 +112,43 @@
         "documentation": {}
     },
     {
-        "label": "pickle",
-        "kind": 6,
+        "label": "Flask",
+        "importPath": "flask",
+        "description": "flask",
         "isExtraImport": true,
-        "importPath": "pickle",
-        "description": "pickle",
-        "detail": "pickle",
+        "detail": "flask",
+        "documentation": {}
+    },
+    {
+        "label": "render_template",
+        "importPath": "flask",
+        "description": "flask",
+        "isExtraImport": true,
+        "detail": "flask",
+        "documentation": {}
+    },
+    {
+        "label": "request",
+        "importPath": "flask",
+        "description": "flask",
+        "isExtraImport": true,
+        "detail": "flask",
+        "documentation": {}
+    },
+    {
+        "label": "jsonify",
+        "importPath": "flask",
+        "description": "flask",
+        "isExtraImport": true,
+        "detail": "flask",
+        "documentation": {}
+    },
+    {
+        "label": "keyboard",
+        "importPath": "pynput",
+        "description": "pynput",
+        "isExtraImport": true,
+        "detail": "pynput",
         "documentation": {}
     },
     {
@@ -100,6 +157,355 @@
         "description": "sklearn.svm",
         "isExtraImport": true,
         "detail": "sklearn.svm",
+        "documentation": {}
+    },
+    {
+        "label": "SVC",
+        "importPath": "sklearn.svm",
+        "description": "sklearn.svm",
+        "isExtraImport": true,
+        "detail": "sklearn.svm",
+        "documentation": {}
+    },
+    {
+        "label": "KMeans",
+        "importPath": "sklearn.cluster",
+        "description": "sklearn.cluster",
+        "isExtraImport": true,
+        "detail": "sklearn.cluster",
+        "documentation": {}
+    },
+    {
+        "label": "MyGestureClassifier",
+        "kind": 6,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "class MyGestureClassifier:\n    def __init__(self):\n        self.samples = []  # List of feature vectors\n        self.labels = []   # Corresponding gesture labels\n        self.model = None\n    def train(self):\n        if len(self.samples) == 0:\n            print(\"No samples to train on.\")\n            return\n        X = np.array(self.samples)",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "fuzzy_distortion",
+        "kind": 2,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "def fuzzy_distortion(image, strength=5, kernel_size=3):\n    \"\"\"\n    Applies a slight fuzzy distortion to the input image.\n    Args:\n        image (np.array): The input image.\n        strength (int): Maximum displacement in pixels.\n        kernel_size (int): Size of Gaussian blur kernel (must be odd). A larger kernel adds more blur.\n    Returns:\n        np.array: The distorted image.\n    \"\"\"",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "save_augmented_sample",
+        "kind": 2,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "def save_augmented_sample(image, label, count):\n    \"\"\"\n    Generates a fuzzy-distorted version of the image and saves it to disk.\n    Args:\n        image (np.array): The original image.\n        label (str): The gesture label.\n        count (int): A count used to create a unique filename.\n    \"\"\"\n    aug_image = fuzzy_distortion(image, strength=5, kernel_size=3)\n    filename = f\"aug_sample_{label}_{count}.jpg\"",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "beep",
+        "kind": 2,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "def beep():\n    \"\"\"Plays a short beep sound (using macOS afplay).\"\"\"\n    os.system(\"afplay /System/Library/Sounds/Ping.aiff\")\n# ------------------------\n# Helper: Flatten Landmark Functions\n# ------------------------\ndef flatten_hand_landmarks(hand_landmarks, expected_count=21):\n    \"\"\"\n    Flattens hand landmarks into a list of floats.\n    Args:",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "flatten_hand_landmarks",
+        "kind": 2,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "def flatten_hand_landmarks(hand_landmarks, expected_count=21):\n    \"\"\"\n    Flattens hand landmarks into a list of floats.\n    Args:\n        hand_landmarks: A MediaPipe hand landmarks object.\n        expected_count (int): Expected number of landmarks (default 21).\n    Returns:\n        List of floats (length = expected_count * 3). Returns zeros if no landmarks.\n    \"\"\"\n    if hand_landmarks is None:",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "flatten_face_landmarks",
+        "kind": 2,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "def flatten_face_landmarks(face_landmarks, expected_count=468):\n    \"\"\"\n    Flattens face landmarks into a list of floats.\n    Args:\n        face_landmarks: A MediaPipe face landmarks object.\n        expected_count (int): Expected number of landmarks (default 468).\n    Returns:\n        List of floats (length = expected_count * 3). Returns zeros if no landmarks.\n    \"\"\"\n    if face_landmarks is None:",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "extract_all_features",
+        "kind": 2,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "def extract_all_features(hand_results, face_results):\n    \"\"\"\n    Extracts a combined feature vector from detected hand and face landmarks.\n    \"\"\"\n    left_hand_vec = [0.0] * (21 * 3)\n    right_hand_vec = [0.0] * (21 * 3)\n    if hand_results.multi_hand_landmarks:\n        hands = list(hand_results.multi_hand_landmarks)\n        hands = sorted(hands, key=lambda hand: hand.landmark[mp.solutions.hands.HandLandmark.WRIST].x)\n        if len(hands) >= 2:",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "initialize_classifier",
+        "kind": 2,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "def initialize_classifier():\n    return MyGestureClassifier()\ndef update_classifier(classifier, samples):\n    classifier.update(samples)\n    return classifier\ndef execute_system_action(action):\n    \"\"\"\n    Executes a system command based on the recognized gesture or keyboard action.\n    \"\"\"\n    print(\"Executing system action:\", action)",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "update_classifier",
+        "kind": 2,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "def update_classifier(classifier, samples):\n    classifier.update(samples)\n    return classifier\ndef execute_system_action(action):\n    \"\"\"\n    Executes a system command based on the recognized gesture or keyboard action.\n    \"\"\"\n    print(\"Executing system action:\", action)\n    if action == \"stop\":\n        print(\"Action: Stop executed.\")",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "execute_system_action",
+        "kind": 2,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "def execute_system_action(action):\n    \"\"\"\n    Executes a system command based on the recognized gesture or keyboard action.\n    \"\"\"\n    print(\"Executing system action:\", action)\n    if action == \"stop\":\n        print(\"Action: Stop executed.\")\n    elif action == \"point_upper_left\":\n        os.system(\"osascript -e 'tell application \\\"System Events\\\" to set the position of the first window of process \\\"Finder\\\" to {0, 0}'\")\n    elif action == \"point_upper_right\":",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "draw_pose_info",
+        "kind": 2,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "def draw_pose_info(frame, pose_results, mp_pose):\n    \"\"\"\n    Overlays key points on detected arms and upper torso from pose detection.\n    Draws circles at the shoulders, elbows, wrists, and hips and connects them with lines.\n    \"\"\"\n    if pose_results.pose_landmarks:\n        h, w, _ = frame.shape\n        # Define the key landmarks to track.\n        landmarks_to_draw = [\n            mp_pose.PoseLandmark.LEFT_SHOULDER,",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "draw_debug_info",
+        "kind": 2,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "def draw_debug_info(frame, hand_results, face_results, pose_results, state, next_prompt_text=\"\", mp_pose=None):\n    \"\"\"\n    Draws various debug overlays on the frame including mode, current gesture prompt,\n    predicted action/confidence, and sample count. Also overlays pose landmarks.\n    \"\"\"\n    h, w, _ = frame.shape\n    cv2.putText(frame, f\"Mode: {state['mode']}\", (10, 30),\n                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)\n    cv2.putText(frame, f\"Current: {state['current_prompt']}\", (10, 60),\n                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "on_key_press",
+        "kind": 2,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "def on_key_press(key):\n    \"\"\"\n    Captures key presses and, if the key is in our designated KEY_ACTIONS list,\n    appends it with a timestamp to the key_press_buffer.\n    \"\"\"\n    try:\n        key_name = key.char if hasattr(key, 'char') and key.char is not None else str(key)\n        if key_name in KEY_ACTIONS:\n            timestamp = time.time()\n            key_press_buffer.append((key_name, timestamp))",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "cluster_user_movements",
+        "kind": 2,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "def cluster_user_movements(motion_data):\n    \"\"\"\n    Clusters different user movement approaches using K-Means.\n    \"\"\"\n    if len(motion_data) < 10:\n        print(\"Not enough data for clustering.\")\n        return None\n    X = np.array(motion_data)\n    kmeans = KMeans(n_clusters=3, random_state=0, n_init=10)\n    labels = kmeans.fit_predict(X)",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "extract_motion_features",
+        "kind": 2,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "def extract_motion_features(hand_results, face_results, pose_results, mp_pose):\n    \"\"\"\n    Extracts a feature vector combining hand, face, and pose information.\n    For pose, we use the left and right shoulders.\n    \"\"\"\n    feature_vector = []\n    # Hand features: use wrist positions.\n    if hand_results.multi_hand_landmarks:\n        hands = list(hand_results.multi_hand_landmarks)\n        for hand in hands:",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "index",
+        "kind": 2,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "def index():\n    return render_template('index.html', state=shared_state)\n@app.route('/toggle_mode', methods=['POST'])\ndef toggle_mode():\n    new_mode = request.form.get(\"mode\")\n    shared_state[\"mode\"] = new_mode\n    print(\"Switched mode to\", new_mode)\n    return jsonify(success=True)\n@app.route('/confirm_action', methods=['POST'])\ndef confirm_action():",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "toggle_mode",
+        "kind": 2,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "def toggle_mode():\n    new_mode = request.form.get(\"mode\")\n    shared_state[\"mode\"] = new_mode\n    print(\"Switched mode to\", new_mode)\n    return jsonify(success=True)\n@app.route('/confirm_action', methods=['POST'])\ndef confirm_action():\n    action = shared_state.get(\"predicted_action\")\n    execute_system_action(action)\n    return jsonify(success=True)",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "confirm_action",
+        "kind": 2,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "def confirm_action():\n    action = shared_state.get(\"predicted_action\")\n    execute_system_action(action)\n    return jsonify(success=True)\ndef run_flask():\n    app.run(debug=False, use_reloader=False)\n# ------------------------\n# Main Application Loop\n# ------------------------\ndef main():",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "run_flask",
+        "kind": 2,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "def run_flask():\n    app.run(debug=False, use_reloader=False)\n# ------------------------\n# Main Application Loop\n# ------------------------\ndef main():\n    # Start the Flask server in a separate thread.\n    flask_thread = threading.Thread(target=run_flask)\n    flask_thread.daemon = True\n    flask_thread.start()",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "main",
+        "kind": 2,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "def main():\n    # Start the Flask server in a separate thread.\n    flask_thread = threading.Thread(target=run_flask)\n    flask_thread.daemon = True\n    flask_thread.start()\n    # Open the webcam.\n    cap = cv2.VideoCapture(0, cv2.CAP_AVFOUNDATION)\n    if not cap.isOpened():\n        print(\"Error: Unable to open webcam.\")\n        return",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "os.environ[\"OPENCV_AVFOUNDATION_IGNORE_CONTINUITY\"]",
+        "kind": 5,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "os.environ[\"OPENCV_AVFOUNDATION_IGNORE_CONTINUITY\"] = \"1\"\nimport cv2\nimport mediapipe as mp\nimport numpy as np\nimport time\nimport threading\nimport pickle\nimport random\nfrom collections import deque\nfrom flask import Flask, render_template, request, jsonify",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "shared_state",
+        "kind": 5,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "shared_state = {\n    \"mode\": \"production\",  # \"training\" or \"production\"\n    \"current_prompt\": \"\",\n    \"next_prompt\": \"\",\n    \"predicted_action\": \"none\",\n    \"confidence\": 0.0,\n    \"sample_count\": 0\n}\n# ------------------------\n# Global Buffers and Configurations for New Features",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "BUFFER_SECONDS",
+        "kind": 5,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "BUFFER_SECONDS = 5       # seconds of frame history\nFPS = 30                 # assumed frames per second\nFRAME_BUFFER_SIZE = BUFFER_SECONDS * FPS\nframe_buffer = deque(maxlen=FRAME_BUFFER_SIZE)  # stores tuples: (frame, timestamp)\nkey_press_buffer = []    # stores (key_name, timestamp) for designated key events\nmotion_data = []         # collects motion features for clustering user approaches\n# ------------------------\n# Constants & Prompts for Gestures\n# ------------------------\nSAMPLE_THRESHOLD = 10         # number of training samples to collect per gesture",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "FPS",
+        "kind": 5,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "FPS = 30                 # assumed frames per second\nFRAME_BUFFER_SIZE = BUFFER_SECONDS * FPS\nframe_buffer = deque(maxlen=FRAME_BUFFER_SIZE)  # stores tuples: (frame, timestamp)\nkey_press_buffer = []    # stores (key_name, timestamp) for designated key events\nmotion_data = []         # collects motion features for clustering user approaches\n# ------------------------\n# Constants & Prompts for Gestures\n# ------------------------\nSAMPLE_THRESHOLD = 10         # number of training samples to collect per gesture\nCONFIDENCE_THRESHOLD = 0.1    # threshold for accepting predictions in production mode",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "FRAME_BUFFER_SIZE",
+        "kind": 5,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "FRAME_BUFFER_SIZE = BUFFER_SECONDS * FPS\nframe_buffer = deque(maxlen=FRAME_BUFFER_SIZE)  # stores tuples: (frame, timestamp)\nkey_press_buffer = []    # stores (key_name, timestamp) for designated key events\nmotion_data = []         # collects motion features for clustering user approaches\n# ------------------------\n# Constants & Prompts for Gestures\n# ------------------------\nSAMPLE_THRESHOLD = 10         # number of training samples to collect per gesture\nCONFIDENCE_THRESHOLD = 0.1    # threshold for accepting predictions in production mode\nMOTION_WINDOW = 3             # number of consecutive frames used for a prediction sample",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "frame_buffer",
+        "kind": 5,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "frame_buffer = deque(maxlen=FRAME_BUFFER_SIZE)  # stores tuples: (frame, timestamp)\nkey_press_buffer = []    # stores (key_name, timestamp) for designated key events\nmotion_data = []         # collects motion features for clustering user approaches\n# ------------------------\n# Constants & Prompts for Gestures\n# ------------------------\nSAMPLE_THRESHOLD = 10         # number of training samples to collect per gesture\nCONFIDENCE_THRESHOLD = 0.1    # threshold for accepting predictions in production mode\nMOTION_WINDOW = 3             # number of consecutive frames used for a prediction sample\nPAUSE_DURATION = 5            # pause (in seconds) between gesture training prompts",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "key_press_buffer",
+        "kind": 5,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "key_press_buffer = []    # stores (key_name, timestamp) for designated key events\nmotion_data = []         # collects motion features for clustering user approaches\n# ------------------------\n# Constants & Prompts for Gestures\n# ------------------------\nSAMPLE_THRESHOLD = 10         # number of training samples to collect per gesture\nCONFIDENCE_THRESHOLD = 0.1    # threshold for accepting predictions in production mode\nMOTION_WINDOW = 3             # number of consecutive frames used for a prediction sample\nPAUSE_DURATION = 5            # pause (in seconds) between gesture training prompts\ngesture_prompts = [",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "motion_data",
+        "kind": 5,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "motion_data = []         # collects motion features for clustering user approaches\n# ------------------------\n# Constants & Prompts for Gestures\n# ------------------------\nSAMPLE_THRESHOLD = 10         # number of training samples to collect per gesture\nCONFIDENCE_THRESHOLD = 0.1    # threshold for accepting predictions in production mode\nMOTION_WINDOW = 3             # number of consecutive frames used for a prediction sample\nPAUSE_DURATION = 5            # pause (in seconds) between gesture training prompts\ngesture_prompts = [\n    \"point_upper_left\",",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "SAMPLE_THRESHOLD",
+        "kind": 5,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "SAMPLE_THRESHOLD = 10         # number of training samples to collect per gesture\nCONFIDENCE_THRESHOLD = 0.1    # threshold for accepting predictions in production mode\nMOTION_WINDOW = 3             # number of consecutive frames used for a prediction sample\nPAUSE_DURATION = 5            # pause (in seconds) between gesture training prompts\ngesture_prompts = [\n    \"point_upper_left\",\n    \"point_upper_right\",\n    \"stop\",\n    \"swipe_left\",\n    \"swipe_right\",",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "CONFIDENCE_THRESHOLD",
+        "kind": 5,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "CONFIDENCE_THRESHOLD = 0.1    # threshold for accepting predictions in production mode\nMOTION_WINDOW = 3             # number of consecutive frames used for a prediction sample\nPAUSE_DURATION = 5            # pause (in seconds) between gesture training prompts\ngesture_prompts = [\n    \"point_upper_left\",\n    \"point_upper_right\",\n    \"stop\",\n    \"swipe_left\",\n    \"swipe_right\",\n    \"volume_adjust\",",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "MOTION_WINDOW",
+        "kind": 5,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "MOTION_WINDOW = 3             # number of consecutive frames used for a prediction sample\nPAUSE_DURATION = 5            # pause (in seconds) between gesture training prompts\ngesture_prompts = [\n    \"point_upper_left\",\n    \"point_upper_right\",\n    \"stop\",\n    \"swipe_left\",\n    \"swipe_right\",\n    \"volume_adjust\",\n    \"brightness_adjust\",",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "PAUSE_DURATION",
+        "kind": 5,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "PAUSE_DURATION = 5            # pause (in seconds) between gesture training prompts\ngesture_prompts = [\n    \"point_upper_left\",\n    \"point_upper_right\",\n    \"stop\",\n    \"swipe_left\",\n    \"swipe_right\",\n    \"volume_adjust\",\n    \"brightness_adjust\",\n    \"mute\",",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "gesture_prompts",
+        "kind": 5,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "gesture_prompts = [\n    \"point_upper_left\",\n    \"point_upper_right\",\n    \"stop\",\n    \"swipe_left\",\n    \"swipe_right\",\n    \"volume_adjust\",\n    \"brightness_adjust\",\n    \"mute\",\n    \"back\"",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "KEY_ACTIONS",
+        "kind": 5,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "KEY_ACTIONS = {\n    \"volume_up\": \"volume_up\",\n    \"volume_down\": \"volume_down\",\n    \"next_song\": \"next_song\",\n    \"pause\": \"pause\"\n}\n# ------------------------\n# Fuzzy Distortion for Data Augmentation\n# ------------------------\ndef fuzzy_distortion(image, strength=5, kernel_size=3):",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "keyboard_listener",
+        "kind": 5,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "keyboard_listener = keyboard.Listener(on_press=on_key_press)\nkeyboard_listener.daemon = True\nkeyboard_listener.start()\n# ------------------------\n# Clustering of User Motion\n# ------------------------\ndef cluster_user_movements(motion_data):\n    \"\"\"\n    Clusters different user movement approaches using K-Means.\n    \"\"\"",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "keyboard_listener.daemon",
+        "kind": 5,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "keyboard_listener.daemon = True\nkeyboard_listener.start()\n# ------------------------\n# Clustering of User Motion\n# ------------------------\ndef cluster_user_movements(motion_data):\n    \"\"\"\n    Clusters different user movement approaches using K-Means.\n    \"\"\"\n    if len(motion_data) < 10:",
+        "detail": "integrated_gesture_pose_fuzzy",
+        "documentation": {}
+    },
+    {
+        "label": "app",
+        "kind": 5,
+        "importPath": "integrated_gesture_pose_fuzzy",
+        "description": "integrated_gesture_pose_fuzzy",
+        "peekOfCode": "app = Flask(__name__, template_folder='templates')\n@app.route('/')\ndef index():\n    return render_template('index.html', state=shared_state)\n@app.route('/toggle_mode', methods=['POST'])\ndef toggle_mode():\n    new_mode = request.form.get(\"mode\")\n    shared_state[\"mode\"] = new_mode\n    print(\"Switched mode to\", new_mode)\n    return jsonify(success=True)",
+        "detail": "integrated_gesture_pose_fuzzy",
         "documentation": {}
     },
     {
