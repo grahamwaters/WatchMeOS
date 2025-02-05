@@ -1,0 +1,312 @@
+[
+    {
+        "label": "os",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "os",
+        "description": "os",
+        "detail": "os",
+        "documentation": {}
+    },
+    {
+        "label": "cv2",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "cv2",
+        "description": "cv2",
+        "detail": "cv2",
+        "documentation": {}
+    },
+    {
+        "label": "mediapipe",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "mediapipe",
+        "description": "mediapipe",
+        "detail": "mediapipe",
+        "documentation": {}
+    },
+    {
+        "label": "numpy",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "numpy",
+        "description": "numpy",
+        "detail": "numpy",
+        "documentation": {}
+    },
+    {
+        "label": "time",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "time",
+        "description": "time",
+        "detail": "time",
+        "documentation": {}
+    },
+    {
+        "label": "threading",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "threading",
+        "description": "threading",
+        "detail": "threading",
+        "documentation": {}
+    },
+    {
+        "label": "Flask",
+        "importPath": "flask",
+        "description": "flask",
+        "isExtraImport": true,
+        "detail": "flask",
+        "documentation": {}
+    },
+    {
+        "label": "render_template",
+        "importPath": "flask",
+        "description": "flask",
+        "isExtraImport": true,
+        "detail": "flask",
+        "documentation": {}
+    },
+    {
+        "label": "request",
+        "importPath": "flask",
+        "description": "flask",
+        "isExtraImport": true,
+        "detail": "flask",
+        "documentation": {}
+    },
+    {
+        "label": "jsonify",
+        "importPath": "flask",
+        "description": "flask",
+        "isExtraImport": true,
+        "detail": "flask",
+        "documentation": {}
+    },
+    {
+        "label": "pickle",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "pickle",
+        "description": "pickle",
+        "detail": "pickle",
+        "documentation": {}
+    },
+    {
+        "label": "SVC",
+        "importPath": "sklearn.svm",
+        "description": "sklearn.svm",
+        "isExtraImport": true,
+        "detail": "sklearn.svm",
+        "documentation": {}
+    },
+    {
+        "label": "MyGestureClassifier",
+        "kind": 6,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "class MyGestureClassifier:\n    def __init__(self):\n        self.samples = []  # List of feature vectors\n        self.labels = []   # Corresponding labels (strings)\n        self.model = None\n    def train(self):\n        if len(self.samples) == 0:\n            print(\"No samples to train on.\")\n            return\n        X = np.array(self.samples)",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "beep",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def beep():\n    \"\"\"Play a short beep sound (using macOS afplay).\"\"\"\n    os.system(\"afplay /System/Library/Sounds/Ping.aiff\")\n# ------------------------\n# Helper: Save Progress\n# ------------------------\ndef save_progress(classifier):\n    \"\"\"Save the current classifier progress to a pickle file.\"\"\"\n    with open(\"gesture_classifier_progress.pkl\", \"wb\") as f:\n        pickle.dump(classifier, f)",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "save_progress",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def save_progress(classifier):\n    \"\"\"Save the current classifier progress to a pickle file.\"\"\"\n    with open(\"gesture_classifier_progress.pkl\", \"wb\") as f:\n        pickle.dump(classifier, f)\n    print(\"Progress saved to gesture_classifier_progress.pkl\")\n# ------------------------\n# Helper: Flatten Landmark Functions\n# ------------------------\ndef flatten_hand_landmarks(hand_landmarks, expected_count=21):\n    \"\"\"",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "flatten_hand_landmarks",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def flatten_hand_landmarks(hand_landmarks, expected_count=21):\n    \"\"\"\n    Flatten the landmarks of one hand.\n    Returns a list of expected_count*3 values.\n    If hand_landmarks is None, returns zeros.\n    \"\"\"\n    if hand_landmarks is None:\n        return [0.0] * (expected_count * 3)\n    vec = []\n    for lm in hand_landmarks.landmark:",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "flatten_face_landmarks",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def flatten_face_landmarks(face_landmarks, expected_count=468):\n    \"\"\"\n    Flatten the landmarks of the face.\n    Returns a list of expected_count*3 values.\n    If face_landmarks is None, returns zeros.\n    \"\"\"\n    if face_landmarks is None:\n        return [0.0] * (expected_count * 3)\n    vec = []\n    for lm in face_landmarks.landmark:",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "extract_all_features",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def extract_all_features(hand_results, face_results):\n    \"\"\"\n    Extract features from both hands and the face.\n    For hands:\n      - If two hands are detected, sort them by wrist x-coordinate.\n      - If only one hand is detected, assign it to left if its wrist x < 0.5, else right.\n      - Missing hand features are replaced by zeros.\n    For face:\n      - If detected, flatten all 468 landmarks.\n      - Otherwise, return a zero vector.",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "initialize_classifier",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def initialize_classifier():\n    return MyGestureClassifier()\ndef update_classifier(classifier, samples):\n    classifier.update(samples)\n    return classifier\ndef execute_system_action(action):\n    \"\"\"Execute a system command based on the recognized gesture.\"\"\"\n    print(\"Executing system action:\", action)\n    if action == \"stop\":\n        print(\"Action: Stop executed.\")",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "update_classifier",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def update_classifier(classifier, samples):\n    classifier.update(samples)\n    return classifier\ndef execute_system_action(action):\n    \"\"\"Execute a system command based on the recognized gesture.\"\"\"\n    print(\"Executing system action:\", action)\n    if action == \"stop\":\n        print(\"Action: Stop executed.\")\n    elif action == \"point_upper_left\":\n        os.system(\"osascript -e 'tell application \\\"System Events\\\" to set the position of the first window of process \\\"Finder\\\" to {0, 0}'\")",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "execute_system_action",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def execute_system_action(action):\n    \"\"\"Execute a system command based on the recognized gesture.\"\"\"\n    print(\"Executing system action:\", action)\n    if action == \"stop\":\n        print(\"Action: Stop executed.\")\n    elif action == \"point_upper_left\":\n        os.system(\"osascript -e 'tell application \\\"System Events\\\" to set the position of the first window of process \\\"Finder\\\" to {0, 0}'\")\n    elif action == \"point_upper_right\":\n        os.system(\"osascript -e 'tell application \\\"System Events\\\" to set the position of the first window of process \\\"Finder\\\" to {1000, 0}'\")\n    elif action == \"swipe_left\":",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "draw_debug_info",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def draw_debug_info(frame, hand_results, face_results, state, next_prompt_text=\"\"):\n    \"\"\"\n    Draw overlays on the frame:\n      - Display the mode, current prompt, next up pose, predicted action/confidence, and sample count.\n      - Draw left-hand landmarks in red, right-hand landmarks in blue.\n      - Draw face landmarks in faint green, mark the face center with a green circle,\n        and draw a line from the face center to each hand's wrist.\n    \"\"\"\n    h, w, _ = frame.shape\n    cv2.putText(frame, f\"Mode: {state['mode']}\", (10, 30),",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "index",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def index():\n    return render_template('index.html', state=shared_state)\n@app.route('/toggle_mode', methods=['POST'])\ndef toggle_mode():\n    new_mode = request.form.get(\"mode\")\n    shared_state[\"mode\"] = new_mode\n    print(\"Switched mode to\", new_mode)\n    return jsonify(success=True)\n@app.route('/confirm_action', methods=['POST'])\ndef confirm_action():",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "toggle_mode",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def toggle_mode():\n    new_mode = request.form.get(\"mode\")\n    shared_state[\"mode\"] = new_mode\n    print(\"Switched mode to\", new_mode)\n    return jsonify(success=True)\n@app.route('/confirm_action', methods=['POST'])\ndef confirm_action():\n    action = shared_state.get(\"predicted_action\")\n    execute_system_action(action)\n    return jsonify(success=True)",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "confirm_action",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def confirm_action():\n    action = shared_state.get(\"predicted_action\")\n    execute_system_action(action)\n    return jsonify(success=True)\ndef run_flask():\n    app.run(debug=False, use_reloader=False)\n# ------------------------\n# Main Application Loop\n# ------------------------\ndef main():",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "run_flask",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def run_flask():\n    app.run(debug=False, use_reloader=False)\n# ------------------------\n# Main Application Loop\n# ------------------------\ndef main():\n    flask_thread = threading.Thread(target=run_flask)\n    flask_thread.daemon = True\n    flask_thread.start()\n    cap = cv2.VideoCapture(0, cv2.CAP_AVFOUNDATION)",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "main",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def main():\n    flask_thread = threading.Thread(target=run_flask)\n    flask_thread.daemon = True\n    flask_thread.start()\n    cap = cv2.VideoCapture(0, cv2.CAP_AVFOUNDATION)\n    if not cap.isOpened():\n        print(\"Error: Unable to open webcam.\")\n        return\n    mp_hands = mp.solutions.hands\n    mp_face = mp.solutions.face_mesh",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "os.environ[\"OPENCV_AVFOUNDATION_IGNORE_CONTINUITY\"]",
+        "kind": 5,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "os.environ[\"OPENCV_AVFOUNDATION_IGNORE_CONTINUITY\"] = \"1\"\nimport cv2\nimport mediapipe as mp\nimport numpy as np\nimport time\nimport threading\nfrom flask import Flask, render_template, request, jsonify\nimport pickle\nfrom sklearn.svm import SVC\n# ------------------------",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "shared_state",
+        "kind": 5,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "shared_state = {\n    \"mode\": \"production\",  # \"training\" or \"production\"\n    \"current_prompt\": \"\",\n    \"next_prompt\": \"\",\n    \"predicted_action\": \"none\",\n    \"confidence\": 0.0,\n    \"sample_count\": 0\n}\n# ------------------------\n# Constants & Prompts",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "SAMPLE_THRESHOLD",
+        "kind": 5,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "SAMPLE_THRESHOLD = 10         # Number of training samples to collect per pose\n# CONFIDENCE_THRESHOLD = 0.7    # Confidence threshold for production mode\nCONFIDENCE_THRESHOLD = 0.1\nMOTION_WINDOW = 3             # Number of consecutive frames to record for one sample\nPAUSE_DURATION = 5            # Seconds to pause between poses\ngesture_prompts = [\n    \"point_upper_left\",\n    \"point_upper_right\",\n    \"stop\",\n    \"swipe_left\",",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "CONFIDENCE_THRESHOLD",
+        "kind": 5,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "CONFIDENCE_THRESHOLD = 0.1\nMOTION_WINDOW = 3             # Number of consecutive frames to record for one sample\nPAUSE_DURATION = 5            # Seconds to pause between poses\ngesture_prompts = [\n    \"point_upper_left\",\n    \"point_upper_right\",\n    \"stop\",\n    \"swipe_left\",\n    \"swipe_right\",\n    \"volume_adjust\",",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "MOTION_WINDOW",
+        "kind": 5,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "MOTION_WINDOW = 3             # Number of consecutive frames to record for one sample\nPAUSE_DURATION = 5            # Seconds to pause between poses\ngesture_prompts = [\n    \"point_upper_left\",\n    \"point_upper_right\",\n    \"stop\",\n    \"swipe_left\",\n    \"swipe_right\",\n    \"volume_adjust\",\n    \"brightness_adjust\",",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "PAUSE_DURATION",
+        "kind": 5,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "PAUSE_DURATION = 5            # Seconds to pause between poses\ngesture_prompts = [\n    \"point_upper_left\",\n    \"point_upper_right\",\n    \"stop\",\n    \"swipe_left\",\n    \"swipe_right\",\n    \"volume_adjust\",\n    \"brightness_adjust\",\n    \"mute\",",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "gesture_prompts",
+        "kind": 5,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "gesture_prompts = [\n    \"point_upper_left\",\n    \"point_upper_right\",\n    \"stop\",\n    \"swipe_left\",\n    \"swipe_right\",\n    \"volume_adjust\",\n    \"brightness_adjust\",\n    \"mute\",\n    \"back\"",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "app",
+        "kind": 5,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "app = Flask(__name__, template_folder='templates')\n@app.route('/')\ndef index():\n    return render_template('index.html', state=shared_state)\n@app.route('/toggle_mode', methods=['POST'])\ndef toggle_mode():\n    new_mode = request.form.get(\"mode\")\n    shared_state[\"mode\"] = new_mode\n    print(\"Switched mode to\", new_mode)\n    return jsonify(success=True)",
+        "detail": "main",
+        "documentation": {}
+    }
+]

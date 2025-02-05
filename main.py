@@ -12,13 +12,16 @@ New actions added: "mute" and "back".
 This version tracks both of your hands and your face.
 """
 
+import os
+# Disable Continuity Cameras – use only the built-in (or non-continuity) webcam.
+os.environ["OPENCV_AVFOUNDATION_IGNORE_CONTINUITY"] = "1"
+
 import cv2
 import mediapipe as mp
 import numpy as np
 import time
 import threading
 from flask import Flask, render_template, request, jsonify
-import os
 import pickle
 from sklearn.svm import SVC
 
@@ -26,7 +29,7 @@ from sklearn.svm import SVC
 # Global Shared State
 # ------------------------
 shared_state = {
-    "mode": "training",  # "training" or "production"
+    "mode": "production",  # "training" or "production"
     "current_prompt": "",
     "next_prompt": "",
     "predicted_action": "none",
@@ -38,7 +41,8 @@ shared_state = {
 # Constants & Prompts
 # ------------------------
 SAMPLE_THRESHOLD = 10         # Number of training samples to collect per pose
-CONFIDENCE_THRESHOLD = 0.7    # Confidence threshold for production mode
+# CONFIDENCE_THRESHOLD = 0.7    # Confidence threshold for production mode
+CONFIDENCE_THRESHOLD = 0.1
 MOTION_WINDOW = 3             # Number of consecutive frames to record for one sample
 PAUSE_DURATION = 5            # Seconds to pause between poses
 
@@ -306,7 +310,7 @@ def main():
     flask_thread.daemon = True
     flask_thread.start()
 
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(0, cv2.CAP_AVFOUNDATION)
     if not cap.isOpened():
         print("Error: Unable to open webcam.")
         return
